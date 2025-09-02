@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>AI-Assisted Resume Builder</h1>
+
+<form action="/generate" method="post" id="resume-form">
+  <label>Name</label><input type="text" name="name"><br>
+
+  <label>Email</label><input type="email" name="email"><br>
+
+  <label>Phone</label><input type="text" name="phone"><br>
+
+  <label>Website</label><input type="text" name="website"><br>
+
+  <label>LinkedIn</label><input type="text" name="linkedin"><br>
+
+  <label>GitHub</label><input type="text" name="github"><br>
+
+  <label>Profile Summary</label><br>
+  <textarea name="summary" id="summary" rows="5"></textarea><br>
+  <label><input type="checkbox" id="ai-summary"> Enhance with AI</label><br><br>
+
+  <!-- Work Experience -->
+  <h3>Work Experience</h3>
+  <div id="experience-list">
+    <!-- template entry (visible) -->
+    <div class="entry">
+      <input type="text" name="exp_title" placeholder="Job Title">
+      <input type="text" name="exp_org" placeholder="Organization">
+      <label>Start: <input type="date" name="exp_start"></label>
+      <label>End: <input type="date" name="exp_end"></label>
+      <textarea name="exp_remarks" placeholder="Remarks"></textarea>
+      <button type="button" class="remove-entry">Remove</button>
+      <hr>
+    </div>
+  </div>
+  <button type="button" id="add-exp">+ Add Experience</button>
+
+  <!-- Projects -->
+  <h3>Projects</h3>
+  <div id="projects-list">
+    <div class="entry">
+      <input type="text" name="proj_title" placeholder="Project Title">
+      <input type="text" name="proj_org" placeholder="Organization / Client">
+      <label>Start: <input type="date" name="proj_start"></label>
+      <label>End: <input type="date" name="proj_end"></label>
+      <textarea name="proj_remarks" placeholder="Remarks"></textarea>
+      <button type="button" class="remove-entry">Remove</button>
+      <hr>
+    </div>
+  </div>
+  <button type="button" id="add-proj">+ Add Project</button>
+
+  <!-- Education -->
+  <h3>Education</h3>
+  <div id="education-list">
+    <div class="entry">
+      <input type="text" name="edu_title" placeholder="Degree / Course">
+      <input type="text" name="edu_org" placeholder="Institution">
+      <label>Start: <input type="date" name="edu_start"></label>
+      <label>End: <input type="date" name="edu_end"></label>
+      <textarea name="edu_remarks" placeholder="Remarks"></textarea>
+      <button type="button" class="remove-entry">Remove</button>
+      <hr>
+    </div>
+  </div>
+  <button type="button" id="add-edu">+ Add Education</button>
+
+  <label>Skills (comma separated)</label>
+  <textarea name="skills" rows="2"></textarea><br>
+
+  <label>Awards / Achievements (one per line)</label>
+  <textarea name="awards" rows="3"></textarea><br>
+
+  <button type="submit" name="format" value="pdf">Generate PDF</button>
+  <button type="submit" name="format" value="docx">Generate DOCX</button>
+</form>
+
+<script>
+/* ---------- Dynamic add/remove logic ---------- */
+function attachRemoveButtons(container) {
+  container.querySelectorAll(".remove-entry").forEach(btn => {
+    btn.onclick = (e) => {
+      const entry = e.target.closest(".entry");
+      const list = entry.parentElement;
+      // keep at least one row
+      if (list.querySelectorAll(".entry").length > 1) {
+        entry.remove();
+      } else {
+        // clear fields instead
+        entry.querySelectorAll("input, textarea").forEach(el => el.value = "");
+      }
+    };
+  });
+}
+
+function cloneTemplate(listId) {
+  const list = document.getElementById(listId);
+  const first = list.querySelector(".entry");
+  if (!first) return;
+  const clone = first.cloneNode(true);
+  // clear all input values
+  clone.querySelectorAll("input, textarea").forEach(el => el.value = "");
+  list.appendChild(clone);
+  attachRemoveButtons(list);
+}
+
+/* Add button handlers */
+document.getElementById("add-exp").addEventListener("click", () => cloneTemplate("experience-list"));
+document.getElementById("add-proj").addEventListener("click", () => cloneTemplate("projects-list"));
+document.getElementById("add-edu").addEventListener("click", () => cloneTemplate("education-list"));
+
+/* attach initial remove handlers */
+attachRemoveButtons(document.getElementById("experience-list"));
+attachRemoveButtons(document.getElementById("projects-list"));
+attachRemoveButtons(document.getElementById("education-list"));
+
+/* ---------- AI summary enhancement ---------- */
+document.getElementById("ai-summary").addEventListener("change", async function() {
+  if (this.checked) {
+    const summary = document.getElementById("summary").value;
+    try {
+      const resp = await fetch("/ai/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary })
+      });
+      if (!resp.ok) throw new Error("AI request failed");
+      const data = await resp.json();
+      if (data.enhanced) {
+        document.getElementById("summary").value = data.enhanced;
+      }
+    } catch (err) {
+      alert("AI enhancement failed: " + err.message);
+      this.checked = false;
+    }
+  }
+});
+</script>
+
+{% endblock %}
